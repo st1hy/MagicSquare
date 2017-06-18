@@ -14,6 +14,7 @@ Written in several languages as an exercise and as a kind of a benchmark.
  Rust (nightly 1.18) |    4.0 MT/s	    |   13.2 MT/s
  Rust 1.18           |    3.3 MT/s      |   11.6 MT/s
  Rust (nightly 1.19) |    4.0 MT/s	    |   14.1 MT/s
+ C++ (gnu++14 -O3)   |    3.6 MT/s      |   12.4 MT/s
 
 
  kT/s -     1 000 squares tried per second
