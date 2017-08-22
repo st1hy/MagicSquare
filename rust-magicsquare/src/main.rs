@@ -17,14 +17,14 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, SystemTime};
 use chrono::prelude::*;
-use std::io;
-use std::io::{Read, BufReader, BufWriter};
+use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use std::fs::{File, OpenOptions};
 
 const MAX_VALUE: usize = 100;
 const SIZE: usize = 3;
 const STATE_FILENAME: &'static str = "magic.state";
+const AUTO_SAVE_STATE_DURATION_SEC: u64 = 60 * 5;
 
 fn main() {
     println!("Magic square!");
@@ -54,13 +54,15 @@ fn main() {
             });
         }
     }
-    //io finish
     {
-        let tx = tx.clone();
+        let a_state = arc_state.clone();
         thread::spawn(move || {
-            println!("Press ENTER to quit program");
-            io::stdin().bytes().next();
-            tx.send(());
+            loop {
+                let sleep_duration = Duration::from_secs(AUTO_SAVE_STATE_DURATION_SEC);
+                thread::sleep(sleep_duration);
+                let mut b_state = a_state.lock().unwrap();
+                save_state2(&mut b_state, false);
+            }
         });
     }
 
@@ -261,14 +263,14 @@ fn restore_state(max: usize) -> ArcState {
                 Ok(state) => state,
                 Err(..) => default_state(max),
             }
-        },
+        }
         Err(..) => default_state(max),
     };
     println!("Starting state {:?}", state);
     ArcState::from(state)
 }
 
-fn default_state(max : usize) -> State {
+fn default_state(max: usize) -> State {
     println!("Using default start state");
     let mut vec: Vec<Square> = Vec::new();
     for _ in 0..max {
@@ -281,7 +283,7 @@ fn default_state(max : usize) -> State {
     }
 }
 
-fn save_state(arc_state: &mut ArcState) -> () {
+fn save_state2(arc_state: &mut ArcState, verbose: bool) {
     let state = State::from(&arc_state);
     let path = Path::new(STATE_FILENAME);
     let mut options = OpenOptions::new();
@@ -294,9 +296,13 @@ fn save_state(arc_state: &mut ArcState) -> () {
     };
     let writer = BufWriter::new(&file);
     match serde_json::to_writer(writer, &state) {
-        Ok(..) => println!("Saved state {:?}", state),
-        Err(..) => println!("Saving failed"),
+        Ok(..) => if verbose { println!("Saved state {:?}", state); },
+        Err(..) => if verbose { println!("Saving failed"); },
     }
+}
+
+fn save_state(arc_state: &mut ArcState) {
+    save_state2(arc_state, true);
 }
 
 #[test]
